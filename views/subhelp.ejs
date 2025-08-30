@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subject Helper - Professional Learning Assistant</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Main stylesheet -->
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="app-container" data-theme="dark">
+        <!-- Theme Toggle -->
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+            <i class="fas fa-sun light-icon"></i>
+            <i class="fas fa-moon dark-icon"></i>
+        </button>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-section">
+                    <i class="fas fa-graduation-cap logo-icon"></i>
+                    <h1 class="app-title">Subject Helper</h1>
+                </div>
+                <button class="sidebar-toggle-btn" id="sidebarToggleBtn" aria-label="Toggle sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <div class="search-section">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input 
+                        type="text" 
+                        id="subjectInput" 
+                        placeholder="Enter a subject to explore..."
+                        class="search-input"
+                    >
+                    <button class="search-btn" onclick="searchSubject()" aria-label="Search subject">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="subtopics-section">
+                <div class="section-header">
+                    <h3 class="section-title">Subtopics</h3>
+                    <div class="subtopic-count" id="subtopicCount">0 topics</div>
+                </div>
+                <ul class="subtopic-list" id="subtopicList">
+                    <li class="welcome-message">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Search for a subject to discover its subtopics</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="resize-handle" id="resizeHandle"></div>
+        </aside>
+
+        <!-- Sidebar collapsed indicator -->
+        <div class="sidebar-indicator" id="sidebarIndicator">
+            <i class="fas fa-chevron-right"></i>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-header">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="breadcrumb" id="breadcrumb">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </div>
+            </div>
+
+            <div class="explanation-container" id="explanationContainer">
+                <div class="welcome-content">
+                    <div class="welcome-icon">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <h2 class="welcome-title">Welcome to Subject Helper</h2>
+                    <p class="welcome-description">
+                        Your professional learning assistant. Search for any subject in the sidebar 
+                        to explore its subtopics and get detailed explanations.
+                    </p>
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <i class="fas fa-search"></i>
+                            <h4>Smart Search</h4>
+                            <p>Find subtopics for any subject</p>
+                        </div>
+                        <div class="feature-card">
+                            <i class="fas fa-brain"></i>
+                            <h4>AI-Powered</h4>
+                            <p>Get intelligent explanations</p>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <i class="fas fa-mobile-alt"></i>
+                            <h4>Cross Platform</h4>
+                            <p>Works on all devices</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+        </div>
+        <p class="loading-text">Loading...</p>
+    </div>
+
+    <script>
+// Subject Helper Application JavaScript
+
+class SubjectHelper {
+    constructor() {
+        this.init();
+        this.bindEvents();
+        this.loadTheme();
+        this.setupResizing();
+    }
+
+    init() {
+        // Cache DOM elements
+        this.sidebar = document.getElementById('sidebar');
+        this.sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+        this.sidebarIndicator = document.getElementById('sidebarIndicator');
+        this.mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        this.themeToggle = document.getElementById('themeToggle');
+        this.subjectInput = document.getElementById('subjectInput');
+        this.subtopicList = document.getElementById('subtopicList');
+        this.subtopicCount = document.getElementById('subtopicCount');
+        this.explanationContainer = document.getElementById('explanationContainer');
+        this.breadcrumb = document.getElementById('breadcrumb');
+        this.loadingOverlay = document.getElementById('loadingOverlay');
+        this.resizeHandle = document.getElementById('resizeHandle');
+
+        // State
+        this.isResizing = false;
+        this.currentSubject = '';
+        this.activeSubtopic = null;
+    }
+
+    bindEvents() {
+        // Theme toggle
+        this.themeToggle.addEventListener('click', () => this.toggleTheme());
+
+        // Sidebar toggle
+        this.sidebarToggleBtn.addEventListener('click', () => this.toggleSidebar());
+        this.sidebarIndicator.addEventListener('click', () => this.toggleSidebar());
+        this.mobileMenuBtn.addEventListener('click', () => this.toggleSidebar());
+
+        // Search
+        this.subjectInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.searchSubject();
+            }
+        });
+
+        // Global click handler for closing sidebar on mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768) {
+                const isClickInsideSidebar = this.sidebar.contains(e.target);
+                const isToggleButton = e.target.closest('#sidebarToggleBtn, #sidebarIndicator, #mobileMenuBtn');
+                
+                if (!isClickInsideSidebar && !isToggleButton && this.sidebar.classList.contains('visible')) {
+                    this.toggleSidebar();
+                }
+            }
+        });
+
+        // Escape key to close sidebar on mobile
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && window.innerWidth <= 768 && this.sidebar.classList.contains('visible')) {
+                this.toggleSidebar();
+            }
+        });
+    }
+
+    setupResizing() {
+        this.resizeHandle.addEventListener('mousedown', (e) => {
+            this.isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!this.isResizing) return;
+
+            const newWidth = e.clientX;
+            const minWidth = 280;
+            const maxWidth = 500;
+
+            if (newWidth >= minWidth && newWidth <= maxWidth) {
+                this.sidebar.style.width = `${newWidth}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (this.isResizing) {
+                this.isResizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+    }
+
+    toggleTheme() {
+        const container = document.querySelector('.app-container');
+        const currentTheme = container.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        container.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+
+        // Add a subtle animation effect
+        this.themeToggle.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+            this.themeToggle.style.transform = '';
+        }, 150);
+    }
+
+    loadTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        const container = document.querySelector('.app-container');
+        container.setAttribute('data-theme', savedTheme);
+    }
+
+    toggleSidebar() {
+        if (window.innerWidth <= 768) {
+            // Mobile behavior
+            this.sidebar.classList.toggle('visible');
+        } else {
+            // Desktop behavior
+            this.sidebar.classList.toggle('collapsed');
+        }
+    }
+
+    showLoading(message = 'Loading...') {
+        const loadingText = this.loadingOverlay.querySelector('.loading-text');
+        loadingText.textContent = message;
+        this.loadingOverlay.classList.add('visible');
+    }
+
+    hideLoading() {
+        this.loadingOverlay.classList.remove('visible');
+    }
+
+    updateBreadcrumb(subject = '', subtopic = '') {
+        let breadcrumbHTML = '<i class="fas fa-home"></i><span>Home</span>';
+        
+        if (subject) {
+            breadcrumbHTML += `<i class="fas fa-chevron-right"></i><span>${subject}</span>`;
+        }
+        
+        if (subtopic) {
+            breadcrumbHTML += `<i class="fas fa-chevron-right"></i><span>${subtopic}</span>`;
+        }
+        
+        this.breadcrumb.innerHTML = breadcrumbHTML;
+    }
+
+    async searchSubject() {
+        const subject = this.subjectInput.value.trim();
+        if (!subject) {
+            this.showNotification('Please enter a subject to search', 'warning');
+            return;
+        }
+
+        this.currentSubject = subject;
+        this.showLoading('Searching for subtopics...');
+        
+        try {
+            const response = await fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ subject }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            this.displaySubtopics(data.subtopics);
+            this.updateBreadcrumb(subject);
+            this.showWelcomeMessage();
+            
+        } catch (error) {
+            console.error('Error searching subject:', error);
+            this.showErrorMessage('Failed to search for subtopics. Please try again.');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    displaySubtopics(subtopics) {
+        this.subtopicList.innerHTML = '';
+        
+        if (!subtopics || subtopics.length === 0) {
+            this.subtopicList.innerHTML = `
+                <li class="welcome-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>No subtopics found for this subject</span>
+                </li>
+            `;
+            this.subtopicCount.textContent = '0 topics';
+            return;
+        }
+
+        subtopics.forEach((subtopic, index) => {
+            const li = document.createElement('li');
+            li.textContent = subtopic.replace(/^[-*•]\s*/, '');
+            li.addEventListener('click', () => this.selectSubtopic(subtopic, li));
+            
+            // Add slight delay for animation effect
+            li.style.opacity = '0';
+            li.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+                li.style.transition = 'all 0.3s ease';
+                li.style.opacity = '1';
+                li.style.transform = 'translateX(0)';
+            }, index * 50);
+            
+            this.subtopicList.appendChild(li);
+        });
+
+        this.subtopicCount.textContent = `${subtopics.length} topic${subtopics.length !== 1 ? 's' : ''}`;
+    }
+
+    async selectSubtopic(subtopic, element) {
+        // Update active state
+        if (this.activeSubtopic) {
+            this.activeSubtopic.classList.remove('active');
+        }
+        element.classList.add('active');
+        this.activeSubtopic = element;
+
+        // Show loading in explanation area
+        this.showExplanationLoading();
+        this.updateBreadcrumb(this.currentSubject, subtopic);
+
+        try {
+            const response = await fetch('/explain', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ subtopic }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            this.displayExplanation(subtopic, data.explanation);
+            
+        } catch (error) {
+            console.error('Error getting explanation:', error);
+            this.showErrorMessage('Failed to load explanation. Please try again.');
+        }
+    }
+
+    showExplanationLoading() {
+        this.explanationContainer.innerHTML = `
+            <div class="loading-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px;">
+                <div class="loading-spinner">
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-ring"></div>
+                </div>
+                <p style="margin-top: var(--spacing-lg); color: var(--text-muted);">Loading explanation...</p>
+            </div>
+        `;
+    }
+
+    displayExplanation(subtopic, explanation) {
+        // Convert markdown-like content to HTML
+        const htmlContent = this.markdownToHtml(explanation);
+        
+        this.explanationContainer.innerHTML = `
+            <div class="explanation-content">
+                <h1>${subtopic}</h1>
+                ${htmlContent}
+            </div>
+        `;
+
+        // Smooth scroll to top
+        this.explanationContainer.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+
+    markdownToHtml(markdown) {
+        return markdown
+            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            .replace(/^\d+\.\s+(.*)$/gm, '<li>$1</li>')
+            .replace(/^[-*]\s+(.*)$/gm, '<li>$1</li>')
+            .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/^(?!<[h|u|o])/gm, '<p>')
+            .replace(/(?<!>)$/gm, '</p>')
+            .replace(/<p><\/p>/g, '')
+            .replace(/<p>(<[h|u|o])/g, '$1')
+            .replace(/(<\/[h|u|o][^>]*>)<\/p>/g, '$1');
+    }
+
+    showWelcomeMessage() {
+        this.explanationContainer.innerHTML = `
+            <div class="welcome-content">
+                <div class="welcome-icon">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <h2 class="welcome-title">Ready to Explore ${this.currentSubject}!</h2>
+                <p class="welcome-description">
+                    Great! I've found several subtopics for <strong>${this.currentSubject}</strong>. 
+                    Click on any subtopic in the sidebar to get a detailed explanation.
+                </p>
+            </div>
+        `;
+        this.updateBreadcrumb(this.currentSubject);
+    }
+
+    showErrorMessage(message) {
+        this.explanationContainer.innerHTML = `
+            <div class="welcome-content">
+                <div class="welcome-icon" style="color: #ef4444;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h2 class="welcome-title">Oops! Something went wrong</h2>
+                <p class="welcome-description">${message}</p>
+                <button onclick="location.reload()" style="
+                    background: var(--accent);
+                    color: white;
+                    border: none;
+                    padding: var(--spacing-md) var(--spacing-lg);
+                    border-radius: var(--radius-md);
+                    cursor: pointer;
+                    font-weight: 500;
+                    margin-top: var(--spacing-lg);
+                ">
+                    <i class="fas fa-refresh"></i> Try Again
+                </button>
+            </div>
+        `;
+    }
+
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            z-index: 10000;
+            transform: translateX(100%);
+            transition: transform var(--transition-normal);
+            max-width: 300px;
+            font-weight: 500;
+        `;
+        
+        notification.innerHTML = `
+            <i class="fas fa-${type === 'warning' ? 'exclamation-triangle' : 'info-circle'}" style="margin-right: var(--spacing-sm);"></i>
+            ${message}
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Show notification
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Hide notification after 3 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    }
+}
+
+// Global function for search button (maintaining compatibility)
+function searchSubject() {
+    if (window.subjectHelper) {
+        window.subjectHelper.searchSubject();
+    }
+}
+
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.subjectHelper = new SubjectHelper();
+});
+
+// Handle window resize for responsive behavior
+window.addEventListener('resize', () => {
+    const sidebar = document.getElementById('sidebar');
+    
+    if (window.innerWidth > 768) {
+        // Reset mobile-specific classes when switching to desktop
+        sidebar.classList.remove('visible');
+    } else {
+        // Reset desktop-specific classes when switching to mobile
+        sidebar.classList.remove('collapsed');
+    }
+});
+    </script>
+</body>
+</html>
