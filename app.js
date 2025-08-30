@@ -175,7 +175,7 @@ app.use(express.static(path.join(__dirname, 'views')));
 
 //__________________________________________________________________________________________________________________________________
 mongoose
-    .connect('mongodb://localhost:27017/first_year')
+    .connect(process.env.MONGO_URI || "mongodb://localhost:27017/first_year")
     .then(() => {
         console.log("Database Connected");
     })
