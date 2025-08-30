@@ -7,7 +7,12 @@ require('dotenv').config();
 
 const bodyParser = require('body-parser');
 const { GoogleGenAI } = require('@google/genai');
-const redisClient = require('./redisClient');
+const redis = require('redis');
+const redisClient = redis.createClient({
+  url: process.env.REDIS_URL
+});
+redisClient.connect();
+
 const { cacheResponse } = require('./cacheMiddleware');
 
 let marked;
